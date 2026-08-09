@@ -69,3 +69,19 @@ set_max_delay -datapath_only 13.400 \
 ##   combinational gating), so the async CLR pins get same-clock
 ##   recovery/removal checks that Vivado analyzes automatically - verify
 ##   them in the timing report of every build.
+
+
+# confirm if these are necessary or covering up a mistake!!! Still need to validate the paths of the clocks in core to make sure that these are correct.
+set_false_path -from [get_clocks hr_clk]    -to [get_clocks hdmi_clk]
+set_false_path -from [get_clocks hr_clk]    -to [get_clocks hr_clk_del]
+
+# Constraints / Paths for the fx68k
+set_multicycle_path -setup -from [get_pins CORE/i_main/i_cpu_wrapper/cpu_inst_o/Ir*/C] -to [get_pins CORE/i_main/i_cpu_wrapper/cpu_inst_o/nanoAddr_reg*/D] 2
+set_multicycle_path -setup -from [get_pins CORE/i_main/i_cpu_wrapper/cpu_inst_o/Ir*/C] -to [get_pins CORE/i_main/i_cpu_wrapper/cpu_inst_o/microAddr_reg*/D] 2
+set_multicycle_path -hold  -from [get_pins CORE/i_main/i_cpu_wrapper/cpu_inst_o/Ir*/C] -to [get_pins CORE/i_main/i_cpu_wrapper/cpu_inst_o/nanoAddr_reg*/D] 1
+set_multicycle_path -hold  -from [get_pins CORE/i_main/i_cpu_wrapper/cpu_inst_o/Ir*/C] -to [get_pins CORE/i_main/i_cpu_wrapper/cpu_inst_o/microAddr_reg*/D] 1
+
+set_property KEEP_HIERARCHY TRUE [get_cells *]
+# Stop Synthesis from removing modules.  Makes it easier to see where things are not connecting.
+# Specify the module and it's full path to only apply DONT_TOUCH for that module.
+set_property DONT_TOUCH true [get_cells *]

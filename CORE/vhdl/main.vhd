@@ -740,77 +740,191 @@ begin
    ---------------------------------------------------------------------------
    -- The Minimig core itself
    ---------------------------------------------------------------------------
-
-   i_minimig : minimig_m65
+   i_minimig : entity work.minimig_m65A
       port map (
-         cpu_address    => cpu_addr,
-         cpu_data       => cpu_dout,
-         cpudata_in     => cpu_din,
-         cpu_ipl_n      => cpu_ipl_n,
-         cpu_as_n       => cpu_as_n,
-         cpu_uds_n      => cpu_uds_n,
-         cpu_lds_n      => cpu_lds_n,
-         cpu_r_w        => cpu_rw,
-         cpu_dtack_n    => cpu_dtack_n,
-         cpu_reset_n    => cpu_reset_n,
-         cpu_reset_in_n => cpu_reset_out_n,
-         nmi_addr       => cpu_nmi_addr,
+          cpu_address    => cpu_addr
+         ,cpu_data       => cpu_dout
+         ,cpudata_in     => cpu_din
+         ,cpu_ipl_n      => cpu_ipl_n
+         ,cpu_as_n       => cpu_as_n
+         ,cpu_uds_n      => cpu_uds_n
+         ,cpu_lds_n      => cpu_lds_n
+         ,cpu_r_w        => cpu_rw
+         ,cpu_dtack_n    => cpu_dtack_n
+         ,cpu_reset_n    => cpu_reset_n
+         ,cpu_reset_in_n => cpu_reset_out_n
+         ,nmi_addr       => cpu_nmi_addr
+         ,ovr            => open                 -- no override, minimig's internal logic   
 
-         ram_data       => ram_data_o,
-         ramdata_in     => ram_data_i,
-         ram_address    => ram_addr_o,
-         ram_bhe_n      => ram_bhe_n_o,
-         ram_ble_n      => ram_ble_n_o,
-         ram_we_n       => ram_we_n_o,
-         ram_oe_n       => ram_oe_n_o,
+         ,ram_data       => ram_data_o
+         ,ramdata_in     => ram_data_i
+         --,ram_address(22 downto 1)    => ram_addr_o
+         ,ram_address    => ram_addr_o
+         ,ram_bhe_n      => ram_bhe_n_o
+         ,ram_ble_n      => ram_ble_n_o
+         ,ram_we_n       => ram_we_n_o
+         ,ram_oe_n       => ram_oe_n_o
+         ,chip48         => (others => '0') 
 
-         rst_ext        => amiga_rst,
-         rst_out        => open,
-         clk            => clk_main_i,
-         clk7_en        => clk7_en,
-         clk7n_en       => clk7n_en,
-         c1             => c1,
-         c3             => c3,
-         cck            => cck,
-         eclk           => eclk,
+         ,rst_ext        => amiga_rst
+         ,rst_out        => open
+         ,clk            => clk_main_i
+         ,clk7_en        => clk7_en
+         ,clk7n_en       => clk7n_en
+         ,c1             => c1
+         ,c3             => c3
+         ,cck            => cck
+         ,eclk           => eclk
 
-         joy1_n         => joy1_n,
-         joy2_n         => joy2_n,
-         mouse_btn      => mouse_btn,
-         kms_level      => kms_level,
-         kbd_mouse_type => kbd_mouse_type,
-         kbd_mouse_data => kbd_mouse_data,
-         kbd_ack        => kbd_ack,
+         ,rxd            => '1'                 -- no serial port
+         ,txd            => open                 -- no serial port
+         ,cts            => '1'                 -- no serial port
+         ,rts            => open                 -- no serial port
+         ,dtr            => open                 -- no serial port
+         ,dsr            => '1'                 -- no serial port
+         ,cd             => '1'                 -- no serial port
+         ,ri             => '1'                 -- no serial port
+         
+         ,joy1_n         => joy1_n
+         ,joy2_n         => joy2_n
+         ,joy3_n         => (others => '1')       -- no joystick 3
+         ,joy4_n         => (others => '1')       -- no joystick 4
+         ,joya1          => (others => '0')       -- no analog joystick 1
+         ,joya2          => (others => '0')       -- no analog joystick 2         
+         ,mouse_btn      => mouse_btn
+         ,kms_level      => kms_level
+         ,kbd_mouse_type => kbd_mouse_type
+         ,kbd_mouse_data => kbd_mouse_data
+         ,kbd_ack        => kbd_ack
 
-         pwr_led        => pwr_led_o,
-         fdd_led        => fdd_led_o,
-         hdd_led        => open,
-         rtc            => rtc_i,
+         ,pwr_led        => pwr_led_o
+         ,fdd_led        => fdd_led_o
+         ,hdd_led        => open
 
-         io_uio         => io_uio,
-         io_fpga        => io_fpga,
-         io_strobe      => io_strobe,
-         io_wait        => io_wait,
-         io_din         => io_din,
-         io_dout        => io_dout,
+         ,rtc            => rtc_i
 
-         hsync_n        => vid_hsync_n,
-         vsync_n        => vid_vsync_n,
-         hblank         => vid_hblank,
-         vblank         => vid_vblank,
-         red            => video_red_o,
-         green          => video_green_o,
-         blue           => video_blue_o,
-         ce_pix         => open,                 -- we use the frame-locked CE instead
-         res            => vid_res,
-         lace           => open,                 -- would only gate the analog scandoubler
+         ,io_uio         => io_uio
+         ,io_fpga        => io_fpga
+         ,io_strobe      => io_strobe
+         ,io_wait        => io_wait
+         ,io_din         => io_din
+         ,io_dout        => io_dout
+
+         ,hsync_n        => vid_hsync_n
+         ,vsync_n        => vid_vsync_n
+         ,csync_n        => open
+         ,hblank         => vid_hblank
+         ,vblank         => vid_vblank
+         ,red            => video_red_o
+         ,green          => video_green_o
+         ,blue           => video_blue_o
+         ,ar             => open
+         ,scanline       => open
+         ,ce_pix         => open                 -- we use the frame-locked CE instead
+         ,res            => vid_res
+         ,lace           => open                 -- would only gate the analog scandoubler
                                                  -- (MiSTer: "& ~lace"); VGA keeps bob for now
-         field1         => video_fl_o,           -- field identity for ascal's weave deinterlacer
+         ,field1         => video_fl_o           -- field identity for ascal's weave deinterlacer
                                                  -- (as MiSTer: assign VGA_F1 = field1)
+         ,ldata          => aud_ldata
+         ,rdata          => aud_rdata
+         ,ldata_okk      => open                -- PWM-volume variant: unused
+         ,rdata_okk      => open
+         ,aud_mix        => open
 
-         ldata          => aud_ldata,
-         rdata          => aud_rdata
-      ); -- i_minimig
+         ,toccata_ena       => '0'
+         ,toccata_base      => (others => '0')
+         ,toccata_aud_left  => open
+         ,toccata_aud_right => open
+
+         ,cpucfg          => open
+         ,cachecfg        => open
+         ,memcfg          => open
+         ,bootrom         => open
+
+         ,ide_ena        => open
+         ,ide_fast       => open
+         ,ide_ext_irq    => '0'
+         ,ide_req        => open
+         ,ide_address    => (others => '0')
+         ,ide_write      => '0'
+         ,ide_writedata  => (others => '0')
+         ,ide_read       => '0'
+         ,ide_readdata   => open
+         
+      ); 
+
+
+   -- i_minimig : minimig_m65
+   --    port map (
+   --       cpu_address    => cpu_addr,
+   --       cpu_data       => cpu_dout,
+   --       cpudata_in     => cpu_din,
+   --       cpu_ipl_n      => cpu_ipl_n,
+   --       cpu_as_n       => cpu_as_n,
+   --       cpu_uds_n      => cpu_uds_n,
+   --       cpu_lds_n      => cpu_lds_n,
+   --       cpu_r_w        => cpu_rw,
+   --       cpu_dtack_n    => cpu_dtack_n,
+   --       cpu_reset_n    => cpu_reset_n,
+   --       cpu_reset_in_n => cpu_reset_out_n,
+   --       nmi_addr       => cpu_nmi_addr,
+
+   --       ram_data       => ram_data_o,
+   --       ramdata_in     => ram_data_i,
+   --       ram_address    => ram_addr_o,
+   --       ram_bhe_n      => ram_bhe_n_o,
+   --       ram_ble_n      => ram_ble_n_o,
+   --       ram_we_n       => ram_we_n_o,
+   --       ram_oe_n       => ram_oe_n_o,
+
+   --       rst_ext        => amiga_rst,
+   --       rst_out        => open,
+   --       clk            => clk_main_i,
+   --       clk7_en        => clk7_en,
+   --       clk7n_en       => clk7n_en,
+   --       c1             => c1,
+   --       c3             => c3,
+   --       cck            => cck,
+   --       eclk           => eclk,
+
+   --       joy1_n         => joy1_n,
+   --       joy2_n         => joy2_n,
+   --       mouse_btn      => mouse_btn,
+   --       kms_level      => kms_level,
+   --       kbd_mouse_type => kbd_mouse_type,
+   --       kbd_mouse_data => kbd_mouse_data,
+   --       kbd_ack        => kbd_ack,
+
+   --       pwr_led        => pwr_led_o,
+   --       fdd_led        => fdd_led_o,
+   --       hdd_led        => open,
+   --       rtc            => rtc_i,
+
+   --       io_uio         => io_uio,
+   --       io_fpga        => io_fpga,
+   --       io_strobe      => io_strobe,
+   --       io_wait        => io_wait,
+   --       io_din         => io_din,
+   --       io_dout        => io_dout,
+
+   --       hsync_n        => vid_hsync_n,
+   --       vsync_n        => vid_vsync_n,
+   --       hblank         => vid_hblank,
+   --       vblank         => vid_vblank,
+   --       red            => video_red_o,
+   --       green          => video_green_o,
+   --       blue           => video_blue_o,
+   --       ce_pix         => open,                 -- we use the frame-locked CE instead
+   --       res            => vid_res,
+   --       lace           => open,                 -- would only gate the analog scandoubler
+   --                                               -- (MiSTer: "& ~lace"); VGA keeps bob for now
+   --       field1         => video_fl_o,           -- field identity for ascal's weave deinterlacer
+   --                                               -- (as MiSTer: assign VGA_F1 = field1)
+
+   --       ldata          => aud_ldata,
+   --       rdata          => aud_rdata
+   --    ); -- i_minimig
 
    ---------------------------------------------------------------------------
    -- Video output towards the M2M framework
