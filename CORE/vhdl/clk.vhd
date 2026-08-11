@@ -52,6 +52,10 @@
 -- (single MMCM, 54 MHz demo clock) to generate the 28.375 MHz Amiga PAL core clock.
 -- Entity ports kept identical to the template. Based on the MiSTer2MEGA65 framework
 -- done by sy2002 and MJoergen and licensed under GPL v3.
+--
+-- Aug 2026      David Raynor (Kiwi)  Remove the "main_clk_o" output and replace it with an 
+--                                    internal signal "main_clk" to avoid a warning about multiple 
+--                                    drivers on the output port. 
 -------------------------------------------------------------------------------------------------------------
 
 library ieee;
@@ -96,7 +100,12 @@ signal fast_locked        : std_logic;
 -- glitch-free mux output feeding the shared output BUFG
 signal main_clk_mmcm      : std_logic;
 
+signal main_clk           : std_logic;
+signal src_arst           : std_logic;
+
 begin
+
+main_clk_o  <= main_clk;
 
    -------------------------------------------------------------------------------------
    -- Generate the Amiga core clock: 28.375000 MHz
@@ -243,12 +252,14 @@ begin
    main_clk_bufg : BUFG
       port map (
          I => main_clk_mmcm,
-         O => main_clk_o
+         O => main_clk
       );
 
    -------------------------------------
    -- Reset generation
    -------------------------------------
+
+   src_arst <= not (main_locked and fast_locked);
 
    i_xpm_cdc_async_rst_main : xpm_cdc_async_rst
       generic map (
@@ -259,8 +270,8 @@ begin
          -- Hold the core in reset until BOTH legs are locked, so the "fast" MMCM is already
          -- toggling before the select can ever choose it (load-bearing: BUFGMUX_CTRL would
          -- otherwise forward a dead clock on the first native->fast switch).
-         src_arst  => not (main_locked and fast_locked),   -- 1-bit input: Source reset signal.
-         dest_clk  => main_clk_o,        -- 1-bit input: Destination clock.
+         src_arst  => src_arst,          -- 1-bit input: Source reset signal.
+         dest_clk  => main_clk,          -- 1-bit input: Destination clock.
          dest_arst => main_rst_o         -- 1-bit output: src_rst synchronized to the destination clock domain.
                                          -- This output is registered.
       );
