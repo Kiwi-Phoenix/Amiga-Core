@@ -23,9 +23,6 @@
 -- Based on the MiSTer2MEGA65 framework template, done by sy2002 and MJoergen
 -- in 2022 and licensed under GPL v3.
 -- Amiga 500 port (AExp) done by sy2002 in 2026.
---
--- Aug 2026   David Raynor (Kiwi)
--- Updated to add in the new Amiga Module.
 ----------------------------------------------------------------------------------
 
 library ieee;
@@ -37,7 +34,7 @@ use work.globals.all;
 use work.types_pkg.all;
 use work.video_modes_pkg.all;
 
-entity MEGA65_Core is
+entity MEGA65_Core_Orig is
 generic (
    G_BOARD : string                                         -- Which platform are we running on.
 );
@@ -243,9 +240,9 @@ port (
    cart_d_i                : in  unsigned( 7 downto 0);
    cart_d_o                : out unsigned( 7 downto 0)
 );
-end entity MEGA65_Core;
+end entity MEGA65_Core_Orig;
 
-architecture synthesis of MEGA65_Core is
+architecture synthesis of MEGA65_Core_Orig is
 
 ---------------------------------------------------------------------------------------------
 -- Clocks and active high reset signals for each clock domain
@@ -266,7 +263,6 @@ signal main_ram_bhe_n         : std_logic;
 signal main_ram_ble_n         : std_logic;
 signal main_ram_we_n          : std_logic;
 signal main_ram_oe_n          : std_logic;
-signal ram_qnice_dev_data     : std_logic_vector(15 downto 0);
 
 -- bank selects (combinational decode of the banked address)
 signal main_chip_sel          : std_logic;
@@ -523,8 +519,7 @@ begin
 
    -- MEGA65's power led: By default, it is on and glows green when the MEGA65 is powered on.
    -- We switch it to blue when a long reset is detected and as long as the user keeps pressing the preset button
-   --main_power_led_o     <= '1';
-   main_power_led_o     <= not main_pwr_led;   
+   main_power_led_o     <= '1';
    main_power_led_col_o <= x"0000FF" when main_reset_m2m_i else x"00FF00";
 
    -- Amiga floppy LED on the MEGA65 drive LED (Paula disk-DMA activity).
@@ -664,18 +659,6 @@ begin
          pot1_y_i             => main_pot1_y_i,
          pot2_x_i             => main_pot2_x_i,
          pot2_y_i             => main_pot2_y_i,
-
-         -- QNICE interface for RAM and Kickstart ROM.
-         qnice_clk_i           => qnice_clk_i,
-         qnice_dev_id_i        => qnice_dev_id_i,
-         qnice_dev_ce_i        => qnice_dev_ce_i,
-         qnice_dev_we_i        => qnice_dev_we_i,
-         qnice_dev_addr_i      => qnice_dev_addr_i,
-         qnice_dev_data_i      => qnice_dev_data_i,
-         qnice_dev_data_o      => ram_qnice_dev_data,
-         amiga_chip_scrub      => amiga_chip_scrub,
-         amiga_chip_scrub_addr => amiga_chip_scrub_addr,
-
          rtc_i                => main_rtc_i
       ); -- i_main
 
@@ -684,30 +667,30 @@ begin
    ---------------------------------------------------------------------------------------------
 
    -- bank decode of the banked word address (see header comment)
-   -- main_chip_sel <= '1' when main_ram_addr(22 downto 19) = "0000" else '0';
-   -- main_slow_sel <= '1' when main_ram_addr(22 downto 19) = "1000" else '0';
-   -- main_kick_sel <= '1' when main_ram_addr(22 downto 19) = "1111" else '0';
+   main_chip_sel <= '1' when main_ram_addr(22 downto 19) = "0000" else '0';
+   main_slow_sel <= '1' when main_ram_addr(22 downto 19) = "1000" else '0';
+   main_kick_sel <= '1' when main_ram_addr(22 downto 19) = "1111" else '0';
 
-   -- -- The read mux select must match the 1-cycle BRAM read latency: register it.
-   -- -- Within one 7.09 MHz bus cycle the address is stable for 4 clk28 ticks and
-   -- -- the consumers sample the data in the second half of the cycle, so the
-   -- -- one-tick-late select is glitch-free where it matters.
-   -- read_mux_sel_proc : process (main_clk)
-   -- begin
-   --    if rising_edge(main_clk) then
-   --       if main_kick_sel = '1' then
-   --          main_rd_sel <= "10";
-   --       elsif main_slow_sel = '1' then
-   --          main_rd_sel <= "01";
-   --       else
-   --          main_rd_sel <= "00";
-   --       end if;
-   --    end if;
-   -- end process read_mux_sel_proc;
+   -- The read mux select must match the 1-cycle BRAM read latency: register it.
+   -- Within one 7.09 MHz bus cycle the address is stable for 4 clk28 ticks and
+   -- the consumers sample the data in the second half of the cycle, so the
+   -- one-tick-late select is glitch-free where it matters.
+   read_mux_sel_proc : process (main_clk)
+   begin
+      if rising_edge(main_clk) then
+         if main_kick_sel = '1' then
+            main_rd_sel <= "10";
+         elsif main_slow_sel = '1' then
+            main_rd_sel <= "01";
+         else
+            main_rd_sel <= "00";
+         end if;
+      end if;
+   end process read_mux_sel_proc;
 
-   -- main_ram_rddata <= main_kick_q_u & main_kick_q_l when main_rd_sel = "10" else
-   --                    main_slow_q_u & main_slow_q_l when main_rd_sel = "01" else
-   --                    main_chip_q_u & main_chip_q_l;
+   main_ram_rddata <= main_kick_q_u & main_kick_q_l when main_rd_sel = "10" else
+                      main_slow_q_u & main_slow_q_l when main_rd_sel = "01" else
+                      main_chip_q_u & main_chip_q_l;
 
    ---------------------------------------------------------------------------------------------
    -- Audio and video settings (QNICE clock domain)
@@ -775,21 +758,20 @@ begin
       qnice_dev_data_o <= x"EEEE";
       qnice_dev_wait_o <= '0';
 
-      --qnice_kick_we_u  <= '0';
-      --qnice_kick_we_l  <= '0';
+      qnice_kick_we_u  <= '0';
+      qnice_kick_we_l  <= '0';
       qnice_adf_ce     <= '0';
 
       case qnice_dev_id_i is
 
          when C_DEV_AMIGA_KICK =>
-            qnice_dev_data_o <= ram_qnice_dev_data;
-            -- qnice_kick_we_u <= qnice_dev_ce_i and qnice_dev_we_i and not qnice_dev_addr_i(0);
-            -- qnice_kick_we_l <= qnice_dev_ce_i and qnice_dev_we_i and     qnice_dev_addr_i(0);
-            -- if qnice_dev_addr_i(0) = '0' then
-            --    qnice_dev_data_o <= x"00" & qnice_kick_q_u;
-            -- else
-            --    qnice_dev_data_o <= x"00" & qnice_kick_q_l;
-            -- end if;
+            qnice_kick_we_u <= qnice_dev_ce_i and qnice_dev_we_i and not qnice_dev_addr_i(0);
+            qnice_kick_we_l <= qnice_dev_ce_i and qnice_dev_we_i and     qnice_dev_addr_i(0);
+            if qnice_dev_addr_i(0) = '0' then
+               qnice_dev_data_o <= x"00" & qnice_kick_q_u;
+            else
+               qnice_dev_data_o <= x"00" & qnice_kick_q_l;
+            end if;
 
          when C_DEV_AMIGA_ADF =>
             qnice_adf_ce     <= qnice_dev_ce_i;
@@ -816,132 +798,132 @@ begin
    -- During an Amiga-local cold boot only, the existing Chip RAM port is
    -- overridden for two clocks to clear $000004-$000007. Both byte lanes are
    -- written together; the 68000 and chipset are held in reset throughout.
-   -- main_chip_addr   <= amiga_chip_scrub_addr when amiga_chip_scrub = '1' else main_ram_addr(18 downto 1);
-   -- main_chip_data_u <= (others => '0') when amiga_chip_scrub = '1' else main_ram_wrdata(15 downto 8);
-   -- main_chip_data_l <= (others => '0') when amiga_chip_scrub = '1' else main_ram_wrdata(7 downto 0);
-   -- main_chip_wren_u <= '1' when amiga_chip_scrub = '1' else
-   --                     main_chip_sel and not main_ram_we_n and not main_ram_bhe_n;
-   -- main_chip_wren_l <= '1' when amiga_chip_scrub = '1' else
-   --                     main_chip_sel and not main_ram_we_n and not main_ram_ble_n;
+   main_chip_addr   <= amiga_chip_scrub_addr when amiga_chip_scrub = '1' else main_ram_addr(18 downto 1);
+   main_chip_data_u <= (others => '0') when amiga_chip_scrub = '1' else main_ram_wrdata(15 downto 8);
+   main_chip_data_l <= (others => '0') when amiga_chip_scrub = '1' else main_ram_wrdata(7 downto 0);
+   main_chip_wren_u <= '1' when amiga_chip_scrub = '1' else
+                       main_chip_sel and not main_ram_we_n and not main_ram_bhe_n;
+   main_chip_wren_l <= '1' when amiga_chip_scrub = '1' else
+                       main_chip_sel and not main_ram_we_n and not main_ram_ble_n;
 
-   -- chip_ram_u : entity work.dualport_2clk_ram
-   --    generic map (
-   --       ADDR_WIDTH => 18,
-   --       DATA_WIDTH => 8
-   --    )
-   --    port map (
-   --       clock_a   => main_clk,
-   --       address_a => main_chip_addr,
-   --       data_a    => main_chip_data_u,
-   --       wren_a    => main_chip_wren_u,
-   --       q_a       => main_chip_q_u,
+   chip_ram_u : entity work.dualport_2clk_ram
+      generic map (
+         ADDR_WIDTH => 18,
+         DATA_WIDTH => 8
+      )
+      port map (
+         clock_a   => main_clk,
+         address_a => main_chip_addr,
+         data_a    => main_chip_data_u,
+         wren_a    => main_chip_wren_u,
+         q_a       => main_chip_q_u,
 
-   --       clock_b   => '0',
-   --       address_b => (others => '0'),
-   --       data_b    => (others => '0'),
-   --       wren_b    => '0',
-   --       q_b       => open
-   --    ); -- chip_ram_u
+         clock_b   => '0',
+         address_b => (others => '0'),
+         data_b    => (others => '0'),
+         wren_b    => '0',
+         q_b       => open
+      ); -- chip_ram_u
 
-   -- chip_ram_l : entity work.dualport_2clk_ram
-   --    generic map (
-   --       ADDR_WIDTH => 18,
-   --       DATA_WIDTH => 8
-   --    )
-   --    port map (
-   --       clock_a   => main_clk,
-   --       address_a => main_chip_addr,
-   --       data_a    => main_chip_data_l,
-   --       wren_a    => main_chip_wren_l,
-   --       q_a       => main_chip_q_l,
+   chip_ram_l : entity work.dualport_2clk_ram
+      generic map (
+         ADDR_WIDTH => 18,
+         DATA_WIDTH => 8
+      )
+      port map (
+         clock_a   => main_clk,
+         address_a => main_chip_addr,
+         data_a    => main_chip_data_l,
+         wren_a    => main_chip_wren_l,
+         q_a       => main_chip_q_l,
 
-   --       clock_b   => '0',
-   --       address_b => (others => '0'),
-   --       data_b    => (others => '0'),
-   --       wren_b    => '0',
-   --       q_b       => open
-   --    ); -- chip_ram_l
+         clock_b   => '0',
+         address_b => (others => '0'),
+         data_b    => (others => '0'),
+         wren_b    => '0',
+         q_b       => open
+      ); -- chip_ram_l
 
-   -- slow_ram_u : entity work.dualport_2clk_ram
-   --    generic map (
-   --       ADDR_WIDTH => 18,
-   --       DATA_WIDTH => 8
-   --    )
-   --    port map (
-   --       clock_a   => main_clk,
-   --       address_a => main_ram_addr(18 downto 1),
-   --       data_a    => main_ram_wrdata(15 downto 8),
-   --       wren_a    => main_slow_sel and not main_ram_we_n and not main_ram_bhe_n,
-   --       q_a       => main_slow_q_u,
+   slow_ram_u : entity work.dualport_2clk_ram
+      generic map (
+         ADDR_WIDTH => 18,
+         DATA_WIDTH => 8
+      )
+      port map (
+         clock_a   => main_clk,
+         address_a => main_ram_addr(18 downto 1),
+         data_a    => main_ram_wrdata(15 downto 8),
+         wren_a    => main_slow_sel and not main_ram_we_n and not main_ram_bhe_n,
+         q_a       => main_slow_q_u,
 
-   --       clock_b   => '0',
-   --       address_b => (others => '0'),
-   --       data_b    => (others => '0'),
-   --       wren_b    => '0',
-   --       q_b       => open
-   --    ); -- slow_ram_u
+         clock_b   => '0',
+         address_b => (others => '0'),
+         data_b    => (others => '0'),
+         wren_b    => '0',
+         q_b       => open
+      ); -- slow_ram_u
 
-   -- slow_ram_l : entity work.dualport_2clk_ram
-   --    generic map (
-   --       ADDR_WIDTH => 18,
-   --       DATA_WIDTH => 8
-   --    )
-   --    port map (
-   --       clock_a   => main_clk,
-   --       address_a => main_ram_addr(18 downto 1),
-   --       data_a    => main_ram_wrdata(7 downto 0),
-   --       wren_a    => main_slow_sel and not main_ram_we_n and not main_ram_ble_n,
-   --       q_a       => main_slow_q_l,
+   slow_ram_l : entity work.dualport_2clk_ram
+      generic map (
+         ADDR_WIDTH => 18,
+         DATA_WIDTH => 8
+      )
+      port map (
+         clock_a   => main_clk,
+         address_a => main_ram_addr(18 downto 1),
+         data_a    => main_ram_wrdata(7 downto 0),
+         wren_a    => main_slow_sel and not main_ram_we_n and not main_ram_ble_n,
+         q_a       => main_slow_q_l,
 
-   --       clock_b   => '0',
-   --       address_b => (others => '0'),
-   --       data_b    => (others => '0'),
-   --       wren_b    => '0',
-   --       q_b       => open
-   --    ); -- slow_ram_l
+         clock_b   => '0',
+         address_b => (others => '0'),
+         data_b    => (others => '0'),
+         wren_b    => '0',
+         q_b       => open
+      ); -- slow_ram_l
 
-   -- -- Kickstart: read-only from the Amiga side (wren_a fixed '0'); written only
-   -- -- by the QNICE Shell during the mandatory auto-load. The core-side address
-   -- -- ignores bit 18, mirroring the 256 KB ROM at $F80000 and $FC0000.
-   -- kick_rom_u : entity work.dualport_2clk_ram
-   --    generic map (
-   --       ADDR_WIDTH => 17,
-   --       DATA_WIDTH => 8,
-   --       FALLING_B  => true
-   --    )
-   --    port map (
-   --       clock_a   => main_clk,
-   --       address_a => main_ram_addr(17 downto 1),
-   --       data_a    => (others => '0'),
-   --       wren_a    => '0',
-   --       q_a       => main_kick_q_u,
+   -- Kickstart: read-only from the Amiga side (wren_a fixed '0'); written only
+   -- by the QNICE Shell during the mandatory auto-load. The core-side address
+   -- ignores bit 18, mirroring the 256 KB ROM at $F80000 and $FC0000.
+   kick_rom_u : entity work.dualport_2clk_ram
+      generic map (
+         ADDR_WIDTH => 17,
+         DATA_WIDTH => 8,
+         FALLING_B  => true
+      )
+      port map (
+         clock_a   => main_clk,
+         address_a => main_ram_addr(17 downto 1),
+         data_a    => (others => '0'),
+         wren_a    => '0',
+         q_a       => main_kick_q_u,
 
-   --       clock_b   => qnice_clk_i,
-   --       address_b => qnice_dev_addr_i(17 downto 1),
-   --       data_b    => qnice_dev_data_i(7 downto 0),
-   --       wren_b    => qnice_kick_we_u,
-   --       q_b       => qnice_kick_q_u
-   --    ); -- kick_rom_u
+         clock_b   => qnice_clk_i,
+         address_b => qnice_dev_addr_i(17 downto 1),
+         data_b    => qnice_dev_data_i(7 downto 0),
+         wren_b    => qnice_kick_we_u,
+         q_b       => qnice_kick_q_u
+      ); -- kick_rom_u
 
-   -- kick_rom_l : entity work.dualport_2clk_ram
-   --    generic map (
-   --       ADDR_WIDTH => 17,
-   --       DATA_WIDTH => 8,
-   --       FALLING_B  => true
-   --    )
-   --    port map (
-   --       clock_a   => main_clk,
-   --       address_a => main_ram_addr(17 downto 1),
-   --       data_a    => (others => '0'),
-   --       wren_a    => '0',
-   --       q_a       => main_kick_q_l,
+   kick_rom_l : entity work.dualport_2clk_ram
+      generic map (
+         ADDR_WIDTH => 17,
+         DATA_WIDTH => 8,
+         FALLING_B  => true
+      )
+      port map (
+         clock_a   => main_clk,
+         address_a => main_ram_addr(17 downto 1),
+         data_a    => (others => '0'),
+         wren_a    => '0',
+         q_a       => main_kick_q_l,
 
-   --       clock_b   => qnice_clk_i,
-   --       address_b => qnice_dev_addr_i(17 downto 1),
-   --       data_b    => qnice_dev_data_i(7 downto 0),
-   --       wren_b    => qnice_kick_we_l,
-   --       q_b       => qnice_kick_q_l
-   --    ); -- kick_rom_l
+         clock_b   => qnice_clk_i,
+         address_b => qnice_dev_addr_i(17 downto 1),
+         data_b    => qnice_dev_data_i(7 downto 0),
+         wren_b    => qnice_kick_we_l,
+         q_b       => qnice_kick_q_l
+      ); -- kick_rom_l
 
    ---------------------------------------------------------------------------------------------
    -- ADF floppy: HyperRAM plumbing

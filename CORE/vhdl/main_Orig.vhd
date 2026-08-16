@@ -12,12 +12,6 @@
 -- Based on the MiSTer2MEGA65 framework template, done by sy2002 and MJoergen
 -- in 2022 and licensed under GPL v3.
 -- Amiga 500 port (AExp) done by sy2002 in 2026.
---
--- Aug 2026     David Raynor (Kiwi)
--- Updated to use the New Amiga Module.  Module is used to group all Amiga related 
--- modules together.  Internal components to the Amiga. E.g. CPU, Custom Chips, Memory, etc.  
--- The Amiga module is used to simplify the top level and make it easier to manage.
--- Also using the MiSTer CPU_Wrapper to add in the Original CPU core.
 ----------------------------------------------------------------------------------
 
 library ieee;
@@ -27,7 +21,7 @@ use ieee.numeric_std.all;
 library work;
 use work.video_modes_pkg.all;
 
-entity main is
+entity main_Orig is
    generic (
       G_VDNUM                 : natural;                    -- amount of virtual drives
       G_ADF_BASE_ADDRESS      : std_logic_vector(21 downto 0)  -- ADF image HyperRAM word base
@@ -137,26 +131,15 @@ entity main is
       pot2_x_i                : in  std_logic_vector(7 downto 0);
       pot2_y_i                : in  std_logic_vector(7 downto 0);
 
-      -- QNICE Interface for RAM scrub and ROM load data
-      qnice_clk_i             : in std_logic;
-      qnice_dev_id_i          : in std_logic_vector(15 downto 0);
-      qnice_dev_ce_i          : in std_logic;
-      qnice_dev_we_i          : in std_logic;
-      qnice_dev_addr_i        : in std_logic_vector(27 downto 0);
-      qnice_dev_data_i        : in std_logic_vector(15 downto 0);
-      qnice_dev_data_o        : out std_logic_vector(15 downto 0);
-      amiga_chip_scrub        : in std_logic;                                         -- Amiga Chip RAM scrub input (active high)
-      amiga_chip_scrub_addr   : in std_logic_vector(17 downto 0);                     -- Amiga Chip RAM scrub address input (22-bit) 
-
       -- Current date/time from the MEGA65 battery-backed RTC (issue #13).
       -- MiSTer 65-bit format (see minimig.v / rtc_controller.vhd): bits 63-0 =
       -- MSM6242B BCD nibbles, bit 64 = "new value" toggle. Already CDC'd to
       -- clk_main_i by the framework, so it needs no further synchronisation.
       rtc_i                   : in  std_logic_vector(64 downto 0)
    );
-end entity main;
+end entity main_Orig;
 
-architecture synthesis of main is
+architecture synthesis of main_orig is
 
    ---------------------------------------------------------------------------
    -- Component declarations for the Verilog modules of the Minimig submodule
@@ -164,140 +147,140 @@ architecture synthesis of main is
    -- all port names are legal VHDL identifiers (see rtl/minimig_m65.v).
    ---------------------------------------------------------------------------
 
-   -- component amiga_clk is
-   --    port (
-   --       clk_28   : in  std_logic;
-   --       clk7_en  : out std_logic;
-   --       clk7n_en : out std_logic;
-   --       c1       : out std_logic;
-   --       c3       : out std_logic;
-   --       cck      : out std_logic;
-   --       eclk     : out std_logic_vector(9 downto 0);
-   --       reset_n  : in  std_logic
-   --    );
-   -- end component amiga_clk;
+   component amiga_clk is
+      port (
+         clk_28   : in  std_logic;
+         clk7_en  : out std_logic;
+         clk7n_en : out std_logic;
+         c1       : out std_logic;
+         c3       : out std_logic;
+         cck      : out std_logic;
+         eclk     : out std_logic_vector(9 downto 0);
+         reset_n  : in  std_logic
+      );
+   end component amiga_clk;
 
-   -- component minimig_m65 is
-   --    port (
-   --       cpu_address    : in  std_logic_vector(23 downto 1);
-   --       cpu_data       : out std_logic_vector(15 downto 0);
-   --       cpudata_in     : in  std_logic_vector(15 downto 0);
-   --       cpu_ipl_n      : out std_logic_vector(2 downto 0);
-   --       cpu_as_n       : in  std_logic;
-   --       cpu_uds_n      : in  std_logic;
-   --       cpu_lds_n      : in  std_logic;
-   --       cpu_r_w        : in  std_logic;
-   --       cpu_dtack_n    : out std_logic;
-   --       cpu_reset_n    : out std_logic;
-   --       cpu_reset_in_n : in  std_logic;
-   --       nmi_addr       : in  std_logic_vector(31 downto 0);
+   component minimig_m65 is
+      port (
+         cpu_address    : in  std_logic_vector(23 downto 1);
+         cpu_data       : out std_logic_vector(15 downto 0);
+         cpudata_in     : in  std_logic_vector(15 downto 0);
+         cpu_ipl_n      : out std_logic_vector(2 downto 0);
+         cpu_as_n       : in  std_logic;
+         cpu_uds_n      : in  std_logic;
+         cpu_lds_n      : in  std_logic;
+         cpu_r_w        : in  std_logic;
+         cpu_dtack_n    : out std_logic;
+         cpu_reset_n    : out std_logic;
+         cpu_reset_in_n : in  std_logic;
+         nmi_addr       : in  std_logic_vector(31 downto 0);
 
-   --       ram_data       : out std_logic_vector(15 downto 0);
-   --       ramdata_in     : in  std_logic_vector(15 downto 0);
-   --       ram_address    : out std_logic_vector(22 downto 1);
-   --       ram_bhe_n      : out std_logic;
-   --       ram_ble_n      : out std_logic;
-   --       ram_we_n       : out std_logic;
-   --       ram_oe_n       : out std_logic;
+         ram_data       : out std_logic_vector(15 downto 0);
+         ramdata_in     : in  std_logic_vector(15 downto 0);
+         ram_address    : out std_logic_vector(22 downto 1);
+         ram_bhe_n      : out std_logic;
+         ram_ble_n      : out std_logic;
+         ram_we_n       : out std_logic;
+         ram_oe_n       : out std_logic;
 
-   --       rst_ext        : in  std_logic;
-   --       rst_out        : out std_logic;
-   --       clk            : in  std_logic;
-   --       clk7_en        : in  std_logic;
-   --       clk7n_en       : in  std_logic;
-   --       c1             : in  std_logic;
-   --       c3             : in  std_logic;
-   --       cck            : in  std_logic;
-   --       eclk           : in  std_logic_vector(9 downto 0);
+         rst_ext        : in  std_logic;
+         rst_out        : out std_logic;
+         clk            : in  std_logic;
+         clk7_en        : in  std_logic;
+         clk7n_en       : in  std_logic;
+         c1             : in  std_logic;
+         c3             : in  std_logic;
+         cck            : in  std_logic;
+         eclk           : in  std_logic_vector(9 downto 0);
 
-   --       joy1_n         : in  std_logic_vector(15 downto 0);
-   --       joy2_n         : in  std_logic_vector(15 downto 0);
-   --       mouse_btn      : in  std_logic_vector(2 downto 0);
-   --       kms_level      : in  std_logic;
-   --       kbd_mouse_type : in  std_logic_vector(1 downto 0);
-   --       kbd_mouse_data : in  std_logic_vector(7 downto 0);
-   --       kbd_ack        : out std_logic;   -- CIA-A keyboard-SDR-read handshake (see keyboard.vhd)
+         joy1_n         : in  std_logic_vector(15 downto 0);
+         joy2_n         : in  std_logic_vector(15 downto 0);
+         mouse_btn      : in  std_logic_vector(2 downto 0);
+         kms_level      : in  std_logic;
+         kbd_mouse_type : in  std_logic_vector(1 downto 0);
+         kbd_mouse_data : in  std_logic_vector(7 downto 0);
+         kbd_ack        : out std_logic;   -- CIA-A keyboard-SDR-read handshake (see keyboard.vhd)
 
-   --       pwr_led        : out std_logic;
-   --       fdd_led        : out std_logic;
-   --       hdd_led        : out std_logic;
+         pwr_led        : out std_logic;
+         fdd_led        : out std_logic;
+         hdd_led        : out std_logic;
 
-   --       rtc            : in  std_logic_vector(64 downto 0);
+         rtc            : in  std_logic_vector(64 downto 0);
 
-   --       io_uio         : in  std_logic;
-   --       io_fpga        : in  std_logic;
-   --       io_strobe      : in  std_logic;
-   --       io_wait        : out std_logic;
-   --       io_din         : in  std_logic_vector(15 downto 0);
-   --       io_dout        : out std_logic_vector(15 downto 0);
+         io_uio         : in  std_logic;
+         io_fpga        : in  std_logic;
+         io_strobe      : in  std_logic;
+         io_wait        : out std_logic;
+         io_din         : in  std_logic_vector(15 downto 0);
+         io_dout        : out std_logic_vector(15 downto 0);
 
-   --       hsync_n        : out std_logic;
-   --       vsync_n        : out std_logic;
-   --       hblank         : out std_logic;
-   --       vblank         : out std_logic;
-   --       red            : out std_logic_vector(7 downto 0);
-   --       green          : out std_logic_vector(7 downto 0);
-   --       blue           : out std_logic_vector(7 downto 0);
-   --       ce_pix         : out std_logic;
-   --       res            : out std_logic_vector(1 downto 0);
-   --       lace           : out std_logic;
-   --       field1         : out std_logic;
+         hsync_n        : out std_logic;
+         vsync_n        : out std_logic;
+         hblank         : out std_logic;
+         vblank         : out std_logic;
+         red            : out std_logic_vector(7 downto 0);
+         green          : out std_logic_vector(7 downto 0);
+         blue           : out std_logic_vector(7 downto 0);
+         ce_pix         : out std_logic;
+         res            : out std_logic_vector(1 downto 0);
+         lace           : out std_logic;
+         field1         : out std_logic;
 
-   --       ldata          : out std_logic_vector(14 downto 0);
-   --       rdata          : out std_logic_vector(14 downto 0)
-   --    );
-   -- end component minimig_m65;
+         ldata          : out std_logic_vector(14 downto 0);
+         rdata          : out std_logic_vector(14 downto 0)
+      );
+   end component minimig_m65;
 
-   -- component cpu_wrapper is
-   --    port (
-   --       reset          : in  std_logic;                       -- ACTIVE LOW
-   --       reset_out      : out std_logic;                       -- active low (fx68k RESET instruction)
+   component cpu_wrapper is
+      port (
+         reset          : in  std_logic;                       -- ACTIVE LOW
+         reset_out      : out std_logic;                       -- active low (fx68k RESET instruction)
 
-   --       clk            : in  std_logic;
-   --       ph1            : in  std_logic;
-   --       ph2            : in  std_logic;
+         clk            : in  std_logic;
+         ph1            : in  std_logic;
+         ph2            : in  std_logic;
 
-   --       cpucfg         : in  std_logic_vector(1 downto 0);
-   --       fastramcfg     : in  std_logic_vector(2 downto 0);
-   --       cachecfg       : in  std_logic_vector(2 downto 0);
-   --       bootrom        : in  std_logic;
+         cpucfg         : in  std_logic_vector(1 downto 0);
+         fastramcfg     : in  std_logic_vector(2 downto 0);
+         cachecfg       : in  std_logic_vector(2 downto 0);
+         bootrom        : in  std_logic;
 
-   --       chip_addr      : out std_logic_vector(23 downto 1);
-   --       chip_dout      : in  std_logic_vector(15 downto 0);
-   --       chip_din       : out std_logic_vector(15 downto 0);
-   --       chip_as        : out std_logic;
-   --       chip_uds       : out std_logic;
-   --       chip_lds       : out std_logic;
-   --       chip_rw        : out std_logic;
-   --       chip_dtack     : in  std_logic;
-   --       chip_ipl       : in  std_logic_vector(2 downto 0);
+         chip_addr      : out std_logic_vector(23 downto 1);
+         chip_dout      : in  std_logic_vector(15 downto 0);
+         chip_din       : out std_logic_vector(15 downto 0);
+         chip_as        : out std_logic;
+         chip_uds       : out std_logic;
+         chip_lds       : out std_logic;
+         chip_rw        : out std_logic;
+         chip_dtack     : in  std_logic;
+         chip_ipl       : in  std_logic_vector(2 downto 0);
 
-   --       fastchip_dout  : in  std_logic_vector(15 downto 0);
-   --       fastchip_sel   : out std_logic;
-   --       fastchip_lds   : out std_logic;
-   --       fastchip_uds   : out std_logic;
-   --       fastchip_rnw   : out std_logic;
-   --       fastchip_lw    : out std_logic;
-   --       fastchip_selack: in  std_logic;
-   --       fastchip_ready : in  std_logic;
+         fastchip_dout  : in  std_logic_vector(15 downto 0);
+         fastchip_sel   : out std_logic;
+         fastchip_lds   : out std_logic;
+         fastchip_uds   : out std_logic;
+         fastchip_rnw   : out std_logic;
+         fastchip_lw    : out std_logic;
+         fastchip_selack: in  std_logic;
+         fastchip_ready : in  std_logic;
 
-   --       ramsel         : out std_logic;
-   --       ramaddr        : out std_logic_vector(28 downto 1);
-   --       ramdin         : out std_logic_vector(15 downto 0);
-   --       ramdout        : in  std_logic_vector(15 downto 0);
-   --       ramready       : in  std_logic;
-   --       ramlds         : out std_logic;
-   --       ramuds         : out std_logic;
-   --       ramshared      : out std_logic;
+         ramsel         : out std_logic;
+         ramaddr        : out std_logic_vector(28 downto 1);
+         ramdin         : out std_logic_vector(15 downto 0);
+         ramdout        : in  std_logic_vector(15 downto 0);
+         ramready       : in  std_logic;
+         ramlds         : out std_logic;
+         ramuds         : out std_logic;
+         ramshared      : out std_logic;
 
-   --       toccata_ena    : out std_logic;
-   --       toccata_base   : out std_logic_vector(7 downto 0);
+         toccata_ena    : out std_logic;
+         toccata_base   : out std_logic_vector(7 downto 0);
 
-   --       cpustate       : out std_logic_vector(1 downto 0);
-   --       cacr           : out std_logic_vector(3 downto 0);
-   --       nmi_addr       : out std_logic_vector(31 downto 0)
-   --    );
-   -- end component cpu_wrapper;
+         cpustate       : out std_logic_vector(1 downto 0);
+         cacr           : out std_logic_vector(3 downto 0);
+         nmi_addr       : out std_logic_vector(31 downto 0)
+      );
+   end component cpu_wrapper;
 
    ---------------------------------------------------------------------------
    -- Signals
@@ -412,9 +395,6 @@ architecture synthesis of main is
    signal aud_ldata        : std_logic_vector(14 downto 0);
    signal aud_rdata        : std_logic_vector(14 downto 0);
 
-   -- Power Led
-   signal pwr_led          : std_logic;
-
    -- joysticks in minimig format: active low {...,fire2,fire,up,down,left,right}
    signal joy1_n           : std_logic_vector(15 downto 0);
    signal joy2_n           : std_logic_vector(15 downto 0);
@@ -456,17 +436,17 @@ begin
    -- Amiga clock enables (7.09 MHz, quadrature, colour clock, E-clock)
    ---------------------------------------------------------------------------
 
-   -- i_amiga_clk : amiga_clk
-   --    port map (
-   --       clk_28   => clk_main_i,
-   --       clk7_en  => clk7_en,
-   --       clk7n_en => clk7n_en,
-   --       c1       => c1,
-   --       c3       => c3,
-   --       cck      => cck,
-   --       eclk     => eclk,
-   --       reset_n  => not amiga_rst
-   --    ); -- i_amiga_clk
+   i_amiga_clk : amiga_clk
+      port map (
+         clk_28   => clk_main_i,
+         clk7_en  => clk7_en,
+         clk7n_en => clk7n_en,
+         c1       => c1,
+         c3       => c3,
+         cck      => cck,
+         eclk     => eclk,
+         reset_n  => not amiga_rst
+      ); -- i_amiga_clk
 
    ---------------------------------------------------------------------------
    -- fx68k phase enables
@@ -478,73 +458,73 @@ begin
    -- See .research/phase-a/cpu_wrapper.md section 7.
    ---------------------------------------------------------------------------
 
-   -- cpu_phase_proc : process (clk_main_i)
-   -- begin
-   --    if rising_edge(clk_main_i) then
-   --       if cpu_reset_n = '0' then
-   --          cpu_ph1 <= '0';
-   --          cpu_ph2 <= '0';
-   --       else
-   --          cpu_ph2 <= (not c1) and (not c3);
-   --          cpu_ph1 <= c1 and c3;
-   --       end if;
-   --    end if;
-   -- end process cpu_phase_proc;
+   cpu_phase_proc : process (clk_main_i)
+   begin
+      if rising_edge(clk_main_i) then
+         if cpu_reset_n = '0' then
+            cpu_ph1 <= '0';
+            cpu_ph2 <= '0';
+         else
+            cpu_ph2 <= (not c1) and (not c3);
+            cpu_ph1 <= c1 and c3;
+         end if;
+      end if;
+   end process cpu_phase_proc;
 
    ---------------------------------------------------------------------------
    -- CPU: fx68k via cpu_wrapper (68000, no caches, no fast RAM)
    ---------------------------------------------------------------------------
 
-   -- i_cpu_wrapper : cpu_wrapper
-   --    port map (
-   --       reset           => cpu_reset_n,         -- active low, from minimig
-   --       reset_out       => cpu_reset_out_n,     -- fx68k RESET instruction feedback
+   i_cpu_wrapper : cpu_wrapper
+      port map (
+         reset           => cpu_reset_n,         -- active low, from minimig
+         reset_out       => cpu_reset_out_n,     -- fx68k RESET instruction feedback
 
-   --       clk             => clk_main_i,
-   --       ph1             => cpu_ph1,
-   --       ph2             => cpu_ph2,
+         clk             => clk_main_i,
+         ph1             => cpu_ph1,
+         ph2             => cpu_ph2,
 
-   --       cpucfg          => "00",                -- 68000; MUST be constant so the
-   --                                               -- removed-TG68K muxes constant-fold
-   --       fastramcfg      => "000",               -- no Zorro fast RAM
-   --       cachecfg        => "000",               -- no caches
-   --       bootrom         => '0',                 -- normal A500 memory map
+         cpucfg          => "00",                -- 68000; MUST be constant so the
+                                                 -- removed-TG68K muxes constant-fold
+         fastramcfg      => "000",               -- no Zorro fast RAM
+         cachecfg        => "000",               -- no caches
+         bootrom         => '0',                 -- normal A500 memory map
 
-   --       chip_addr       => cpu_addr,
-   --       chip_dout       => cpu_dout,
-   --       chip_din        => cpu_din,
-   --       chip_as         => cpu_as_n,
-   --       chip_uds        => cpu_uds_n,
-   --       chip_lds        => cpu_lds_n,
-   --       chip_rw         => cpu_rw,
-   --       chip_dtack      => cpu_dtack_n,
-   --       chip_ipl        => cpu_ipl_n,
+         chip_addr       => cpu_addr,
+         chip_dout       => cpu_dout,
+         chip_din        => cpu_din,
+         chip_as         => cpu_as_n,
+         chip_uds        => cpu_uds_n,
+         chip_lds        => cpu_lds_n,
+         chip_rw         => cpu_rw,
+         chip_dtack      => cpu_dtack_n,
+         chip_ipl        => cpu_ipl_n,
 
-   --       fastchip_dout   => x"0000",
-   --       fastchip_sel    => open,
-   --       fastchip_lds    => open,
-   --       fastchip_uds    => open,
-   --       fastchip_rnw    => open,
-   --       fastchip_lw     => open,
-   --       fastchip_selack => '0',
-   --       fastchip_ready  => '0',
+         fastchip_dout   => x"0000",
+         fastchip_sel    => open,
+         fastchip_lds    => open,
+         fastchip_uds    => open,
+         fastchip_rnw    => open,
+         fastchip_lw     => open,
+         fastchip_selack => '0',
+         fastchip_ready  => '0',
 
-   --       ramsel          => open,
-   --       ramaddr         => open,
-   --       ramdin          => open,
-   --       ramdout         => x"0000",
-   --       ramready        => '0',
-   --       ramlds          => open,
-   --       ramuds          => open,
-   --       ramshared       => open,
+         ramsel          => open,
+         ramaddr         => open,
+         ramdin          => open,
+         ramdout         => x"0000",
+         ramready        => '0',
+         ramlds          => open,
+         ramuds          => open,
+         ramshared       => open,
 
-   --       toccata_ena     => open,
-   --       toccata_base    => open,
+         toccata_ena     => open,
+         toccata_base    => open,
 
-   --       cpustate        => open,
-   --       cacr            => open,
-   --       nmi_addr        => cpu_nmi_addr
-   --    ); -- i_cpu_wrapper
+         cpustate        => open,
+         cacr            => open,
+         nmi_addr        => cpu_nmi_addr
+      ); -- i_cpu_wrapper
 
    ---------------------------------------------------------------------------
    -- Host configuration FSM: replays MiSTer's HPS startup configuration
@@ -760,119 +740,119 @@ begin
    ---------------------------------------------------------------------------
    -- The Minimig core itself
    ---------------------------------------------------------------------------
-   -- i_minimig : entity work.minimig_m65A
-   --    port map (
-   --        cpu_address    => cpu_addr
-   --       ,cpu_data       => cpu_dout
-   --       ,cpudata_in     => cpu_din
-   --       ,cpu_ipl_n      => cpu_ipl_n
-   --       ,cpu_as_n       => cpu_as_n
-   --       ,cpu_uds_n      => cpu_uds_n
-   --       ,cpu_lds_n      => cpu_lds_n
-   --       ,cpu_r_w        => cpu_rw
-   --       ,cpu_dtack_n    => cpu_dtack_n
-   --       ,cpu_reset_n    => cpu_reset_n
-   --       ,cpu_reset_in_n => cpu_reset_out_n
-   --       ,nmi_addr       => cpu_nmi_addr
-   --       ,ovr            => open                 -- no override, minimig's internal logic   
+   i_minimig : entity work.minimig_m65A
+      port map (
+          cpu_address    => cpu_addr
+         ,cpu_data       => cpu_dout
+         ,cpudata_in     => cpu_din
+         ,cpu_ipl_n      => cpu_ipl_n
+         ,cpu_as_n       => cpu_as_n
+         ,cpu_uds_n      => cpu_uds_n
+         ,cpu_lds_n      => cpu_lds_n
+         ,cpu_r_w        => cpu_rw
+         ,cpu_dtack_n    => cpu_dtack_n
+         ,cpu_reset_n    => cpu_reset_n
+         ,cpu_reset_in_n => cpu_reset_out_n
+         ,nmi_addr       => cpu_nmi_addr
+         ,ovr            => open                 -- no override, minimig's internal logic   
 
-   --       ,ram_data       => ram_data_o
-   --       ,ramdata_in     => ram_data_i
-   --       --,ram_address(22 downto 1)    => ram_addr_o
-   --       ,ram_address    => ram_addr_o
-   --       ,ram_bhe_n      => ram_bhe_n_o
-   --       ,ram_ble_n      => ram_ble_n_o
-   --       ,ram_we_n       => ram_we_n_o
-   --       ,ram_oe_n       => ram_oe_n_o
-   --       ,chip48         => (others => '0') 
+         ,ram_data       => ram_data_o
+         ,ramdata_in     => ram_data_i
+         --,ram_address(22 downto 1)    => ram_addr_o
+         ,ram_address    => ram_addr_o
+         ,ram_bhe_n      => ram_bhe_n_o
+         ,ram_ble_n      => ram_ble_n_o
+         ,ram_we_n       => ram_we_n_o
+         ,ram_oe_n       => ram_oe_n_o
+         ,chip48         => (others => '0') 
 
-   --       ,rst_ext        => amiga_rst
-   --       ,rst_out        => open
-   --       ,clk            => clk_main_i
-   --       ,clk7_en        => clk7_en
-   --       ,clk7n_en       => clk7n_en
-   --       ,c1             => c1
-   --       ,c3             => c3
-   --       ,cck            => cck
-   --       ,eclk           => eclk
+         ,rst_ext        => amiga_rst
+         ,rst_out        => open
+         ,clk            => clk_main_i
+         ,clk7_en        => clk7_en
+         ,clk7n_en       => clk7n_en
+         ,c1             => c1
+         ,c3             => c3
+         ,cck            => cck
+         ,eclk           => eclk
 
-   --       ,rxd            => '1'                 -- no serial port
-   --       ,txd            => open                 -- no serial port
-   --       ,cts            => '1'                 -- no serial port
-   --       ,rts            => open                 -- no serial port
-   --       ,dtr            => open                 -- no serial port
-   --       ,dsr            => '1'                 -- no serial port
-   --       ,cd             => '1'                 -- no serial port
-   --       ,ri             => '1'                 -- no serial port
+         ,rxd            => '1'                 -- no serial port
+         ,txd            => open                 -- no serial port
+         ,cts            => '1'                 -- no serial port
+         ,rts            => open                 -- no serial port
+         ,dtr            => open                 -- no serial port
+         ,dsr            => '1'                 -- no serial port
+         ,cd             => '1'                 -- no serial port
+         ,ri             => '1'                 -- no serial port
          
-   --       ,joy1_n         => joy1_n
-   --       ,joy2_n         => joy2_n
-   --       ,joy3_n         => (others => '1')       -- no joystick 3
-   --       ,joy4_n         => (others => '1')       -- no joystick 4
-   --       ,joya1          => (others => '0')       -- no analog joystick 1
-   --       ,joya2          => (others => '0')       -- no analog joystick 2         
-   --       ,mouse_btn      => mouse_btn
-   --       ,kms_level      => kms_level
-   --       ,kbd_mouse_type => kbd_mouse_type
-   --       ,kbd_mouse_data => kbd_mouse_data
-   --       ,kbd_ack        => kbd_ack
+         ,joy1_n         => joy1_n
+         ,joy2_n         => joy2_n
+         ,joy3_n         => (others => '1')       -- no joystick 3
+         ,joy4_n         => (others => '1')       -- no joystick 4
+         ,joya1          => (others => '0')       -- no analog joystick 1
+         ,joya2          => (others => '0')       -- no analog joystick 2         
+         ,mouse_btn      => mouse_btn
+         ,kms_level      => kms_level
+         ,kbd_mouse_type => kbd_mouse_type
+         ,kbd_mouse_data => kbd_mouse_data
+         ,kbd_ack        => kbd_ack
 
-   --       ,pwr_led        => pwr_led_o
-   --       ,fdd_led        => fdd_led_o
-   --       ,hdd_led        => open
+         ,pwr_led        => pwr_led_o
+         ,fdd_led        => fdd_led_o
+         ,hdd_led        => open
 
-   --       ,rtc            => rtc_i
+         ,rtc            => rtc_i
 
-   --       ,io_uio         => io_uio
-   --       ,io_fpga        => io_fpga
-   --       ,io_strobe      => io_strobe
-   --       ,io_wait        => io_wait
-   --       ,io_din         => io_din
-   --       ,io_dout        => io_dout
+         ,io_uio         => io_uio
+         ,io_fpga        => io_fpga
+         ,io_strobe      => io_strobe
+         ,io_wait        => io_wait
+         ,io_din         => io_din
+         ,io_dout        => io_dout
 
-   --       ,hsync_n        => vid_hsync_n
-   --       ,vsync_n        => vid_vsync_n
-   --       ,csync_n        => open
-   --       ,hblank         => vid_hblank
-   --       ,vblank         => vid_vblank
-   --       ,red            => video_red_o
-   --       ,green          => video_green_o
-   --       ,blue           => video_blue_o
-   --       ,ar             => open
-   --       ,scanline       => open
-   --       ,ce_pix         => open                 -- we use the frame-locked CE instead
-   --       ,res            => vid_res
-   --       ,lace           => open                 -- would only gate the analog scandoubler
-   --                                               -- (MiSTer: "& ~lace"); VGA keeps bob for now
-   --       ,field1         => video_fl_o           -- field identity for ascal's weave deinterlacer
-   --                                               -- (as MiSTer: assign VGA_F1 = field1)
-   --       ,ldata          => aud_ldata
-   --       ,rdata          => aud_rdata
-   --       ,ldata_okk      => open                -- PWM-volume variant: unused
-   --       ,rdata_okk      => open
-   --       ,aud_mix        => open
+         ,hsync_n        => vid_hsync_n
+         ,vsync_n        => vid_vsync_n
+         ,csync_n        => open
+         ,hblank         => vid_hblank
+         ,vblank         => vid_vblank
+         ,red            => video_red_o
+         ,green          => video_green_o
+         ,blue           => video_blue_o
+         ,ar             => open
+         ,scanline       => open
+         ,ce_pix         => open                 -- we use the frame-locked CE instead
+         ,res            => vid_res
+         ,lace           => open                 -- would only gate the analog scandoubler
+                                                 -- (MiSTer: "& ~lace"); VGA keeps bob for now
+         ,field1         => video_fl_o           -- field identity for ascal's weave deinterlacer
+                                                 -- (as MiSTer: assign VGA_F1 = field1)
+         ,ldata          => aud_ldata
+         ,rdata          => aud_rdata
+         ,ldata_okk      => open                -- PWM-volume variant: unused
+         ,rdata_okk      => open
+         ,aud_mix        => open
 
-   --       ,toccata_ena       => '0'
-   --       ,toccata_base      => (others => '0')
-   --       ,toccata_aud_left  => open
-   --       ,toccata_aud_right => open
+         ,toccata_ena       => '0'
+         ,toccata_base      => (others => '0')
+         ,toccata_aud_left  => open
+         ,toccata_aud_right => open
 
-   --       ,cpucfg          => open
-   --       ,cachecfg        => open
-   --       ,memcfg          => open
-   --       ,bootrom         => open
+         ,cpucfg          => open
+         ,cachecfg        => open
+         ,memcfg          => open
+         ,bootrom         => open
 
-   --       ,ide_ena        => open
-   --       ,ide_fast       => open
-   --       ,ide_ext_irq    => '0'
-   --       ,ide_req        => open
-   --       ,ide_address    => (others => '0')
-   --       ,ide_write      => '0'
-   --       ,ide_writedata  => (others => '0')
-   --       ,ide_read       => '0'
-   --       ,ide_readdata   => open
+         ,ide_ena        => open
+         ,ide_fast       => open
+         ,ide_ext_irq    => '0'
+         ,ide_req        => open
+         ,ide_address    => (others => '0')
+         ,ide_write      => '0'
+         ,ide_writedata  => (others => '0')
+         ,ide_read       => '0'
+         ,ide_readdata   => open
          
-   --    ); 
+      ); 
 
 
    -- i_minimig : minimig_m65
@@ -946,82 +926,6 @@ begin
    --       rdata          => aud_rdata
    --    ); -- i_minimig
 
----------------------------------------------------------------------------
--- Amiga Core
----------------------------------------------------------------------------
-Amiga : entity work.amiga_M65
-   port map (
-       main_clk            => clk_main_i
-      ,amiga_reset         => amiga_rst
-      ,clk7_en             => clk7_en
-      ,clk7n_en            => clk7n_en
-      -- LEDs
-      ,pwr_led             => pwr_led
-      ,fdd_led             => fdd_led_o  
-      ,hdd_led             => open             -- No HDD at this time
-      -- Audio
-      ,audio_l             => aud_ldata
-      ,audio_r             => aud_rdata
-      ,rdata_okk           => open             -- Not used in Mega65
-      ,ldata_okk           => open             -- Not used in Mega65
-      ,aud_mix             => open             -- Not used in Mega65
-
-      -- Video
-      ,vga_hsync           => vid_hsync_n
-      ,vga_vsync           => vid_vsync_n
-      ,vga_csync           => open                 -- Not used in Mega65
-      ,hblank              => vid_hblank
-      ,vblank              => vid_vblank
-      ,ce_pix              => open                 -- we use the frame-locked CE instead   
-      ,vga_r               => video_red_o
-      ,vga_g               => video_green_o
-      ,vga_b               => video_blue_o
-      ,vid_res             => vid_res
-      ,lace                => open                 -- would only gate the analog scandoubler
-      ,field1              => video_fl_o           -- field identity for ascal's weave deinterlacer
-                                          -- (as MiSTer: assign VGA_F1 = field1)
-      -- Joysticks                        
-      ,joy1_n              => joy1_n
-      ,joy2_n              => joy2_n
-      ,kbd_mouse_type      => kbd_mouse_type
-      ,kbd_mouse_data      => kbd_mouse_data
-      ,kms_level           => kms_level
-      ,mouse_btn           => mouse_btn
-      ,kbd_ack             => kbd_ack
-
-      -- RTC
-      ,rtc                 => rtc_i
-
-      ,io_uio              => io_uio
-      ,io_fpga             => io_fpga
-      ,io_strobe           => io_strobe
-      ,io_wait             => io_wait
-      ,io_din              => io_din
-      ,io_dout             => io_dout
-
-      -- RAM
-      -- ,ram_addr_o          => ram_addr_o
-      -- ,ram_data_o          => ram_data_o
-      -- ,ram_data_i          => ram_data_i     
-      -- ,ram_bhe_n_o         => ram_bhe_n_o
-      -- ,ram_ble_n_o         => ram_ble_n_o 
-      -- ,ram_we_n_o          => ram_we_n_o
-      -- ,ram_oe_n_o          => ram_oe_n_o
-
-      -- QNICE Interface for ROM data
-      ,amiga_chip_scrub       => amiga_chip_scrub
-      ,amiga_chip_scrub_addr  => amiga_chip_scrub_addr
-      ,qnice_clk_i            => qnice_clk_i
-      ,qnice_dev_id_i         => qnice_dev_id_i
-      ,qnice_dev_ce_i         => qnice_dev_ce_i
-      ,qnice_dev_we_i         => qnice_dev_we_i
-      ,qnice_dev_addr_i       => qnice_dev_addr_i
-      ,qnice_dev_data_i       => qnice_dev_data_i
-      ,qnice_dev_data_o       => qnice_dev_data_o
-      );
-
-   pwr_led_o <= pwr_led;      
-   
    ---------------------------------------------------------------------------
    -- Video output towards the M2M framework
    --

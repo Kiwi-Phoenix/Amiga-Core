@@ -76,10 +76,10 @@ set_false_path -from [get_clocks hr_clk]    -to [get_clocks hdmi_clk]
 set_false_path -from [get_clocks hr_clk]    -to [get_clocks hr_clk_del]
 
 # Constraints / Paths for the fx68k
-set_multicycle_path -setup -from [get_pins CORE/i_main/i_cpu_wrapper/cpu_inst_o/Ir*/C] -to [get_pins CORE/i_main/i_cpu_wrapper/cpu_inst_o/nanoAddr_reg*/D] 2
-set_multicycle_path -setup -from [get_pins CORE/i_main/i_cpu_wrapper/cpu_inst_o/Ir*/C] -to [get_pins CORE/i_main/i_cpu_wrapper/cpu_inst_o/microAddr_reg*/D] 2
-set_multicycle_path -hold  -from [get_pins CORE/i_main/i_cpu_wrapper/cpu_inst_o/Ir*/C] -to [get_pins CORE/i_main/i_cpu_wrapper/cpu_inst_o/nanoAddr_reg*/D] 1
-set_multicycle_path -hold  -from [get_pins CORE/i_main/i_cpu_wrapper/cpu_inst_o/Ir*/C] -to [get_pins CORE/i_main/i_cpu_wrapper/cpu_inst_o/microAddr_reg*/D] 1
+set_multicycle_path -setup -from [get_pins CORE/i_main/Amiga/i_cpu_wrapper/cpu_inst_o/Ir*/C] -to [get_pins CORE/i_main/Amiga/i_cpu_wrapper/cpu_inst_o/nanoAddr_reg*/D] 2
+set_multicycle_path -setup -from [get_pins CORE/i_main/Amiga/i_cpu_wrapper/cpu_inst_o/Ir*/C] -to [get_pins CORE/i_main/Amiga/i_cpu_wrapper/cpu_inst_o/microAddr_reg*/D] 2
+set_multicycle_path -hold  -from [get_pins CORE/i_main/Amiga/i_cpu_wrapper/cpu_inst_o/Ir*/C] -to [get_pins CORE/i_main/Amiga/i_cpu_wrapper/cpu_inst_o/nanoAddr_reg*/D] 1
+set_multicycle_path -hold  -from [get_pins CORE/i_main/Amiga/i_cpu_wrapper/cpu_inst_o/Ir*/C] -to [get_pins CORE/i_main/Amiga/i_cpu_wrapper/cpu_inst_o/microAddr_reg*/D] 1
 
 set_property KEEP_HIERARCHY TRUE [get_cells *]
 # Stop Synthesis from removing modules.  Makes it easier to see where things are not connecting.
