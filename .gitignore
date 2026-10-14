@@ -1,13 +1,29 @@
+# General ignore rules for the Amiga-Core project
+# Vivado junk
 CORE/*.cache
 CORE/*.hw
 CORE/*.runs
 CORE/*.sim
-CORE/.Xil
+CORE/*.Xil
 CORE/vivado*.jou
 CORE/vivado*.log
 CORE/vivado_pid*
-CORE/*ip_user_files
+CORE/*.ip_user_files
+CORE/*.xpr
+CORE/*.xml
+CORE/*.html
+CORE/*.tmp
+CORE/*.data
+CORE/*.db
+CORE/*.dcp
+CORE/*.rpt
+CORE/*.pb
+CORE/*.WDB
+CORE/*.bit
+CORE/*.bin
+CORE/*.mmi
 CORE/webtalk*.*
+# M2M Framework junk
 CORE/m2m-rom/*.def
 CORE/m2m-rom/*.lis
 CORE/m2m-rom/*.out
