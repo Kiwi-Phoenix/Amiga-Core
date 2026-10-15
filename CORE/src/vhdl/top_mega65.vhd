@@ -487,6 +487,8 @@ architecture synthesis of mega65 is
    -- R3 I2C signals
    signal i2c_sda                : std_logic := 'H';
    signal i2c_scl                : std_logic := 'H';
+   
+   signal hdmi_ls_oe_o          : std_logic;
 
    signal reset_n_i            : std_logic;
 
@@ -1036,7 +1038,7 @@ end generate gen_r6_block;
          main_joy_1_up_n_o       => main_joy1_up_n_out,        -- Not connected on the R3 board
          main_joy_1_down_n_o     => main_joy1_down_n_out,      -- Not connected on the R3 board
          main_joy_1_left_n_o     => main_joy1_left_n_out,      -- Not connected on the R3 board
-         main_joy_1_right_n_o    => main_joy1_right_n_out      -- Not connected on the R3 board
+         main_joy_1_right_n_o    => main_joy1_right_n_out,     -- Not connected on the R3 board
          main_joy_1_fire_n_o     => main_joy1_fire_n_out,      -- Not connected on the R3 board
 
          main_joy_2_up_n_i       => main_joy2_up_n_in,
